@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Precedent Engine: Soane Synthesis</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000' rx='15'/><text x='10' y='72' font-family='Arial Black' font-size='60' font-weight='900' fill='%23fff'>R</text><circle cx='75' cy='35' r='15' fill='%23ff6b00'/></svg>">
+    <title>Precedent Engine 3D</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000' rx='15'/><text x='12' y='72' font-family='Arial Black' font-size='65' font-weight='900' fill='%23fff'>R</text><circle cx='70' cy='40' r='25' fill='%23ff6b00'/></svg>">
     
     <script type="importmap">
     {
@@ -15,68 +16,61 @@
     </script>
 
     <style>
-        :root { --accent: #ff6b00; --soane-amber: #ffbf00; --sidebar-bg: #111; }
-        body { margin: 0; background: #000; display: flex; height: 100vh; font-family: 'Georgia', serif; color: #fff; overflow: hidden; }
+        :root { --accent: #ff6b00; --ui-bg: #f5f5f5; --text: #1a1a1a; }
+        body { margin: 0; background: #fff; display: flex; height: 100vh; font-family: 'Inter', sans-serif; color: var(--text); overflow: hidden; }
         
-        /* Sidebar Navigation */
-        .sidebar { width: 300px; border-right: 1px solid #333; padding: 20px; background: var(--sidebar-bg); z-index: 10; display: flex; flex-direction: column; overflow-y: auto; }
-        h1 { font-size: 16px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; color: var(--soane-amber); font-weight: normal; letter-spacing: 1px;}
+        .sidebar { width: 300px; border-right: 1px solid #ddd; padding: 20px; background: var(--ui-bg); z-index: 10; display: flex; flex-direction: column; }
+        h1 { font-size: 14px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; letter-spacing: 1px; color: #000; }
         
-        .control-group { margin-bottom: 20px; border-bottom: 1px solid #222; padding-bottom: 15px; }
-        label { font-size: 10px; font-weight: 900; text-transform: uppercase; color: #aaa; display: block; margin-bottom: 5px; }
+        .control-group { margin-bottom: 20px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
+        label { font-size: 9px; font-weight: 900; text-transform: uppercase; color: #666; display: block; margin-bottom: 5px; }
         
-        input, select { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 8px; margin: 5px 0; border-radius: 2px; font-family: sans-serif;}
-        input[type="range"] { accent-color: var(--accent); cursor: pointer; }
+        input, select { width: 100%; background: #fff; border: 1px solid #ccc; color: #000; padding: 8px; margin: 5px 0; border-radius: 4px; }
+        input[type="range"] { accent-color: var(--accent); cursor: pointer; border: none; }
         
-        .data-out { font-size: 11px; font-weight: bold; color: var(--soane-amber); font-family: sans-serif;}
-        
-        .btn-ui { background: #333; border: 1px solid var(--accent); color: #fff; padding: 10px; width: 100%; cursor: pointer; font-size: 10px; font-weight: bold; transition: 0.2s; }
-        .btn-ui:hover { background: var(--accent); }
-        .btn-ui.active { background: var(--accent); border-color: #fff; }
+        .data-out { font-size: 11px; font-weight: bold; color: var(--accent); }
+        .btn-ui { background: var(--accent); border: none; color: #fff; padding: 10px; width: 100%; cursor: pointer; font-size: 10px; font-weight: bold; border-radius: 4px; }
 
-        #canvas-container { flex: 1; position: relative; }
-        #status-box { background: #1a1a1a; padding: 15px; font-size: 11px; border-left: 3px solid var(--accent); margin-top: auto; font-family: sans-serif; }
+        #canvas-container { flex: 1; position: relative; background: #fff; }
+        #status-box { background: #eee; padding: 15px; font-size: 10px; border-left: 3px solid var(--accent); margin-top: auto; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h1>PRECEDENT ENGINE v7.0</h1>
+    <h1>PRECEDENT ENGINE 3D</h1>
 
     <div class="control-group">
-        <label>Solar Time (Current Date)</label>
-        <input type="range" id="hour" min="6" max="19" step="0.01" value="11.5">
-        <div id="hourVal" class="data-out">11:30</div>
-    </div>
-
-    <div class="control-group">
-        <label>Analysis Transparency</label>
-        <input type="range" id="opacity" min="0.1" max="1" step="0.1" value="0.5">
-        <div class="data-out">Wall Alpha</div>
+        <label>Solar Time</label>
+        <input type="range" id="hour" min="6" max="18" step="0.01" value="10.5">
+        <div id="hourVal" class="data-out">10:30</div>
     </div>
 
     <div class="control-group">
         <label>View Management</label>
-        <button class="btn-ui" id="toggleView">SWITCH TO INTERIOR</button>
-        <select id="spaceJump" style="margin-top:10px;">
+        <select id="spaceJump">
             <option value="exterior">Exterior Overview</option>
-            <option value="crossing">Crossing (Looking Up)</option>
-            <option value="nave">Nave (Looking East)</option>
-            <option value="domeExterior">Dome Detail (Exterior)</option>
+            <option value="interior_nave">Interior: Nave Center</option>
+            <option value="under_dome">Interior: Under Dome (Look Up)</option>
         </select>
     </div>
 
     <div class="control-group">
-        <label>File Intake</label>
+        <label>Building Transparency</label>
+        <input type="range" id="opacity" min="0.1" max="1" step="0.1" value="0.4">
+    </div>
+
+    <div class="control-group">
+        <label>Asset Integration</label>
         <input type="file" id="objInput" accept=".obj">
-        <div style="font-size: 8px; color: #666; margin-top:3px;">Upload .OBJ building shell</div>
-        <input type="file" id="imgInput" accept="image/*" style="margin-top:10px;">
-        <div style="font-size: 8px; color: #666; margin-top:3px;">Upload .JPG floor plan</div>
+        <input type="file" id="imgInput" accept="image/*">
+        <div style="font-size: 8px; color: #999; margin-top: 5px;">Upload .OBJ for building or .JPG for floor plan.</div>
     </div>
 
     <div id="status-box">
-        <strong>ENGINE STATUS:</strong><br>
-        <span id="status">Soane Model Generated...</span>
+        <strong>PRECEDENT DATA:</strong><br>
+        <span id="status">Scene Initialized on White.</span>
+        <div style="margin-top:5px; font-size: 8px; color:#777;">&copy; 2026 R4 All Rights Reserved</div>
     </div>
 </div>
 
@@ -85,188 +79,73 @@
 <script type="module">
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 
-    let scene, camera, renderer, controls, sun, floor, soaneDomeGroup, demoBuilding;
-    let isInterior = false;
+    let scene, camera, renderer, controls, sun, floor, building;
     const container = document.getElementById('canvas-container');
-
-    const locations = {
-        exterior: { pos: [15, 12, 15], look: [0, 0, 0] },
-        nave:     { pos: [-4, -1, 0],  look: [6, -1, 0] },
-        crossing: { pos: [4, -1.8, 0], look: [4, 10, 0] }, // Adjusted for looking UP at the dome
-        altar:    { pos: [8, -1, 0],   look: [0, -1, 0] },
-        domeExterior: {pos: [10, 8, 8], look: [4, 6, 0]}
-    };
 
     function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050505);
+        scene.background = new THREE.Color(0xffffff); // WHITE BACKGROUND
 
-        camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-        camera.position.set(...locations.exterior.pos);
+        camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(15, 10, 15);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows for readability
         container.appendChild(renderer.domElement);
 
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         
-        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-        sun = new THREE.DirectionalLight(0xffffff, 4);
+        // Balanced Light: High Ambient for visibility, strong Sun for shadows
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        sun = new THREE.DirectionalLight(0xffffff, 2.5);
         sun.castShadow = true;
         sun.shadow.mapSize.set(2048, 2048);
         scene.add(sun);
 
-        // Floor
-        const floorGeo = new THREE.PlaneGeometry(25, 25);
-        floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x222222 }));
+        // Floor (The Plan Carrier)
+        const floorGeo = new THREE.PlaneGeometry(30, 30);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0 });
+        floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
-        floor.position.y = -2.1;
+        floor.position.y = -2;
         floor.receiveShadow = true;
         scene.add(floor);
 
-        generateSoanePrecedent();
-        setupListeners();
+        createSoaneDemo();
         animate();
     }
 
-    function generateSoanePrecedent() {
-        if (soaneDomeGroup) scene.remove(soaneDomeGroup);
-        soaneDomeGroup = new THREE.Group();
-        
+    function createSoaneDemo() {
+        building = new THREE.Group();
         const mat = new THREE.MeshStandardMaterial({ 
-            color: 0x444444, 
+            color: 0xcccccc, 
             transparent: true, 
-            opacity: 0.5, 
+            opacity: 0.4, 
             side: THREE.DoubleSide 
         });
 
-        // 1. The Pendentive Base (Transitional vaults)
-        // Simplification: A square base with a circular hole.
-        const baseGeo = new THREE.BoxGeometry(10, 1, 10);
-        const base = new THREE.Mesh(baseGeo, mat);
-        base.position.set(4, 0.5, 0); // Positioned over the crossing
-        base.castShadow = base.receiveShadow = true;
-        soaneDomeGroup.add(base);
-
-        // 2. The Drum (Circular wall with windows)
-        const drumRadius = 4;
-        const drumHeight = 3;
-        const drumGeo = new THREE.CylinderGeometry(drumRadius, drumRadius, drumHeight, 32, 1, true); // True = open ended
-        const drum = new THREE.Mesh(drumGeo, mat);
-        drum.position.set(4, 2.5, 0);
-        drum.castShadow = drum.receiveShadow = true;
-        soaneDomeGroup.add(drum);
-
-        // 3. Soane Stained Glass Simulation (The Windows)
-        // Instead of geometry holes, we use emissive textures.
-        const glassLoader = new THREE.TextureLoader();
-        // A placeholder gradient texture simulating amber/blue geometric glass
-        const glassTex = glassLoader.load('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36z8gAFmACYmAFEEAAY4NVALGBCQA4wAYAn19Z7wAAAABJRU5ErkJggg==');
-        
-        const glassMat = new THREE.MeshBasicMaterial({ 
-            color: 0xffcc33, // Amber base
-            emissive: 0xffcc33, // Stained glass glows
-            emissiveIntensity: 5,
-            transparent: true,
-            opacity: 0.9,
-            side: THREE.DoubleSide
-        });
-        
-        // Twelve windows around the drum
-        const windowCount = 12;
-        for (let i = 0; i < windowCount; i++) {
-            const angle = (i / windowCount) * Math.PI * 2;
-            const windowGeo = new THREE.PlaneGeometry(1.2, 2.2); // Arch shape simulated by plane
-            const windowFrame = new THREE.Mesh(windowGeo, glassMat);
-            
-            // Circular position
-            windowFrame.position.set(
-                4 + Math.sin(angle) * (drumRadius + 0.1),
-                2.5,
-                0 + Math.cos(angle) * (drumRadius + 0.1)
-            );
-            windowFrame.lookAt(4, 2.5, 0); // Always face the center
-            soaneDomeGroup.add(windowFrame);
-        }
-
-        // 4. The Dome (Terminal half-sphere)
-        const domeGeo = new THREE.SphereGeometry(drumRadius, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2); // Half sphere
-        const dome = new THREE.Mesh(domeGeo, mat);
-        dome.position.set(4, 4, 0); // On top of the drum
-        dome.castShadow = dome.receiveShadow = true;
-        soaneDomeGroup.add(dome);
-
-        // 5. Minimal Nave for Context
-        const nave = new THREE.Mesh(new THREE.BoxGeometry(8, 4, 4), mat);
-        nave.position.set(-3, -0.1, 0);
+        // Detailed Soane-Inspired Structure
+        const nave = new THREE.Mesh(new THREE.BoxGeometry(16, 6, 6), mat);
         nave.castShadow = nave.receiveShadow = true;
-        soaneDomeGroup.add(nave);
+        building.add(nave);
 
-        scene.add(soaneDomeGroup);
-    }
+        // Drum with Apertures
+        const drum = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 3, 32, 1, true), mat);
+        drum.position.set(4, 4.5, 0);
+        drum.castShadow = true;
+        building.add(drum);
 
-    function setupListeners() {
-        // Model Upload
-        document.getElementById('objInput').addEventListener('change', (e) => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const loader = new OBJLoader();
-                const object = loader.parse(event.target.result);
-                if(soaneDomeGroup) scene.remove(soaneDomeGroup); // Replace demo
-                currentModel = object;
-                currentModel.traverse(c => {
-                    if (c.isMesh) {
-                        c.castShadow = c.receiveShadow = true;
-                        c.material.transparent = true;
-                        c.material.side = THREE.DoubleSide;
-                    }
-                });
-                scene.add(currentModel);
-                document.getElementById('status').innerText = "3D Precedent Integrated";
-            };
-            reader.readAsText(e.target.files[0]);
-        });
+        // Pendentive Dome
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(3, 32, 16, 0, Math.PI*2, 0, Math.PI/2), mat);
+        dome.position.set(4, 6, 0);
+        dome.castShadow = true;
+        building.add(dome);
 
-        // Floor Upload
-        document.getElementById('imgInput').addEventListener('change', (e) => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                new THREE.TextureLoader().load(event.target.result, (tex) => {
-                    floor.material.map = tex;
-                    floor.material.needsUpdate = true;
-                    document.getElementById('status').innerText = "Floor Plan Data Active";
-                });
-            };
-            reader.readAsDataURL(e.target.files[0]);
-        });
-
-        // View Toggles
-        document.getElementById('toggleView').addEventListener('click', function() {
-            isInterior = !isInterior;
-            this.classList.toggle('active');
-            this.innerText = isInterior ? "SWITCH TO EXTERIOR" : "SWITCH TO INTERIOR";
-            if(isInterior) moveCamera('crossing'); else moveCamera('exterior');
-        });
-
-        document.getElementById('spaceJump').addEventListener('change', (e) => moveCamera(e.target.value));
-    }
-
-    function moveCamera(key) {
-        const loc = locations[key];
-        // Special case: Looking up from floor
-        if(key === 'crossing') {
-            camera.position.set(...loc.pos);
-            controls.target.set(...loc.look); // Look at the dome peak
-        } else {
-            camera.position.set(...loc.pos);
-            controls.target.set(...loc.look);
-        }
-        controls.update();
+        scene.add(building);
     }
 
     function animate() {
@@ -276,17 +155,47 @@
         const op = document.getElementById('opacity').value;
         document.getElementById('hourVal').innerText = Math.floor(hr) + ":" + Math.floor((hr % 1) * 60).toString().padStart(2, '0');
         
-        if (soaneDomeGroup) {
-            soaneDomeGroup.traverse(n => { if(n.isMesh && n.material.type !== "MeshBasicMaterial") n.material.opacity = op; });
+        // Solar Vector
+        const angle = (hr - 12) * (Math.PI / 6);
+        sun.position.set(Math.sin(angle) * 35, 25, Math.cos(angle) * 35);
+        
+        // Update Transparency
+        if(building) {
+            building.traverse(n => { if(n.isMesh) n.material.opacity = op; });
         }
 
-        // Sun Logic
-        const angle = (hr - 12) * (Math.PI / 6);
-        sun.position.set(Math.sin(angle) * 30, 20, Math.cos(angle) * 30);
-        
         controls.update();
         renderer.render(scene, camera);
     }
+
+    // View Switching Logic
+    document.getElementById('spaceJump').addEventListener('change', (e) => {
+        const val = e.target.value;
+        if(val === 'interior_nave') {
+            camera.position.set(-4, -0.5, 0);
+            controls.target.set(4, -0.5, 0);
+        } else if (val === 'under_dome') {
+            camera.position.set(4, -1.8, 0);
+            controls.target.set(4, 12, 0);
+        } else {
+            camera.position.set(15, 10, 15);
+            controls.target.set(0, 0, 0);
+        }
+        controls.update();
+    });
+
+    // File Handling
+    document.getElementById('imgInput').addEventListener('change', (e) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            new THREE.TextureLoader().load(event.target.result, (tex) => {
+                floor.material.map = tex;
+                floor.material.color.set(0xffffff);
+                floor.material.needsUpdate = true;
+            });
+        };
+        reader.readAsDataURL(e.target.files[0]);
+    });
 
     init();
 </script>

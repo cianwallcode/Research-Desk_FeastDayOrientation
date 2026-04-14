@@ -2,54 +2,81 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Precedent Engine 3D</title>
-    
+    <title>Precedent Engine: Soane Synthesis</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000' rx='15'/><text x='10' y='72' font-family='Arial Black' font-size='60' font-weight='900' fill='%23fff'>R</text><circle cx='75' cy='35' r='15' fill='%23ff6b00'/></svg>">
     
     <script type="importmap">
     {
       "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
       }
     }
     </script>
 
     <style>
-        :root { --accent: #ff6b00; }
-        body { margin: 0; background: #000; display: flex; height: 100vh; font-family: sans-serif; color: #fff; overflow: hidden; }
+        :root { --accent: #ff6b00; --soane-amber: #ffbf00; --sidebar-bg: #111; }
+        body { margin: 0; background: #000; display: flex; height: 100vh; font-family: 'Georgia', serif; color: #fff; overflow: hidden; }
         
-        .sidebar { width: 280px; border-right: 1px solid #333; padding: 20px; background: #111; z-index: 10; display: flex; flex-direction: column; }
-        h1 { font-size: 14px; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; color: var(--accent); }
+        /* Sidebar Navigation */
+        .sidebar { width: 300px; border-right: 1px solid #333; padding: 20px; background: var(--sidebar-bg); z-index: 10; display: flex; flex-direction: column; overflow-y: auto; }
+        h1 { font-size: 16px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; color: var(--soane-amber); font-weight: normal; letter-spacing: 1px;}
         
-        .control-group { margin-bottom: 25px; }
-        label { font-size: 9px; font-weight: 900; text-transform: uppercase; color: #888; display: block; }
+        .control-group { margin-bottom: 20px; border-bottom: 1px solid #222; padding-bottom: 15px; }
+        label { font-size: 10px; font-weight: 900; text-transform: uppercase; color: #aaa; display: block; margin-bottom: 5px; }
         
-        input { width: 100%; margin: 10px 0; accent-color: var(--accent); cursor: pointer; }
-        .data-out { font-size: 11px; font-weight: bold; color: var(--accent); }
+        input, select { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 8px; margin: 5px 0; border-radius: 2px; font-family: sans-serif;}
+        input[type="range"] { accent-color: var(--accent); cursor: pointer; }
+        
+        .data-out { font-size: 11px; font-weight: bold; color: var(--soane-amber); font-family: sans-serif;}
+        
+        .btn-ui { background: #333; border: 1px solid var(--accent); color: #fff; padding: 10px; width: 100%; cursor: pointer; font-size: 10px; font-weight: bold; transition: 0.2s; }
+        .btn-ui:hover { background: var(--accent); }
+        .btn-ui.active { background: var(--accent); border-color: #fff; }
 
-        #canvas-container { flex: 1; position: relative; background: #050505; }
-        #status-box { background: #1a1a1a; padding: 15px; font-size: 11px; border-left: 3px solid var(--accent); margin-top: auto; }
+        #canvas-container { flex: 1; position: relative; }
+        #status-box { background: #1a1a1a; padding: 15px; font-size: 11px; border-left: 3px solid var(--accent); margin-top: auto; font-family: sans-serif; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h1>PRECEDENT 3D v4.6</h1>
+    <h1>PRECEDENT ENGINE v7.0</h1>
 
     <div class="control-group">
-        <label>Solar Time</label>
-        <input type="range" id="hour" min="6" max="19" step="0.01" value="10">
-        <div id="hourVal" class="data-out">10:00</div>
+        <label>Solar Time (Current Date)</label>
+        <input type="range" id="hour" min="6" max="19" step="0.01" value="11.5">
+        <div id="hourVal" class="data-out">11:30</div>
     </div>
 
     <div class="control-group">
-        <label>Load Floor Plan</label>
-        <input type="file" id="fileInput" accept="image/*">
+        <label>Analysis Transparency</label>
+        <input type="range" id="opacity" min="0.1" max="1" step="0.1" value="0.5">
+        <div class="data-out">Wall Alpha</div>
+    </div>
+
+    <div class="control-group">
+        <label>View Management</label>
+        <button class="btn-ui" id="toggleView">SWITCH TO INTERIOR</button>
+        <select id="spaceJump" style="margin-top:10px;">
+            <option value="exterior">Exterior Overview</option>
+            <option value="crossing">Crossing (Looking Up)</option>
+            <option value="nave">Nave (Looking East)</option>
+            <option value="domeExterior">Dome Detail (Exterior)</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label>File Intake</label>
+        <input type="file" id="objInput" accept=".obj">
+        <div style="font-size: 8px; color: #666; margin-top:3px;">Upload .OBJ building shell</div>
+        <input type="file" id="imgInput" accept="image/*" style="margin-top:10px;">
+        <div style="font-size: 8px; color: #666; margin-top:3px;">Upload .JPG floor plan</div>
     </div>
 
     <div id="status-box">
         <strong>ENGINE STATUS:</strong><br>
-        <span id="status">Initializing...</span>
+        <span id="status">Soane Model Generated...</span>
     </div>
 </div>
 
@@ -57,99 +84,211 @@
 
 <script type="module">
     import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 
-    let scene, camera, renderer, sun, floor, lantern;
+    let scene, camera, renderer, controls, sun, floor, soaneDomeGroup, demoBuilding;
+    let isInterior = false;
     const container = document.getElementById('canvas-container');
 
+    const locations = {
+        exterior: { pos: [15, 12, 15], look: [0, 0, 0] },
+        nave:     { pos: [-4, -1, 0],  look: [6, -1, 0] },
+        crossing: { pos: [4, -1.8, 0], look: [4, 10, 0] }, // Adjusted for looking UP at the dome
+        altar:    { pos: [8, -1, 0],   look: [0, -1, 0] },
+        domeExterior: {pos: [10, 8, 8], look: [4, 6, 0]}
+    };
+
     function init() {
-        try {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050505);
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050505);
 
-            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(15, 12, 15);
-            camera.lookAt(0, 0, 0);
+        camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(...locations.exterior.pos);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            container.appendChild(renderer.domElement);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
 
-            // Lighting
-            scene.add(new THREE.AmbientLight(0xffffff, 0.2));
-            sun = new THREE.DirectionalLight(0xffffff, 4);
-            sun.castShadow = true;
-            sun.shadow.mapSize.set(2048, 2048);
-            scene.add(sun);
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        
+        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+        sun = new THREE.DirectionalLight(0xffffff, 4);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(2048, 2048);
+        scene.add(sun);
 
-            // The Demo Building
-            const material = new THREE.MeshStandardMaterial({ color: 0x444444 });
+        // Floor
+        const floorGeo = new THREE.PlaneGeometry(25, 25);
+        floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x222222 }));
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -2.1;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        generateSoanePrecedent();
+        setupListeners();
+        animate();
+    }
+
+    function generateSoanePrecedent() {
+        if (soaneDomeGroup) scene.remove(soaneDomeGroup);
+        soaneDomeGroup = new THREE.Group();
+        
+        const mat = new THREE.MeshStandardMaterial({ 
+            color: 0x444444, 
+            transparent: true, 
+            opacity: 0.5, 
+            side: THREE.DoubleSide 
+        });
+
+        // 1. The Pendentive Base (Transitional vaults)
+        // Simplification: A square base with a circular hole.
+        const baseGeo = new THREE.BoxGeometry(10, 1, 10);
+        const base = new THREE.Mesh(baseGeo, mat);
+        base.position.set(4, 0.5, 0); // Positioned over the crossing
+        base.castShadow = base.receiveShadow = true;
+        soaneDomeGroup.add(base);
+
+        // 2. The Drum (Circular wall with windows)
+        const drumRadius = 4;
+        const drumHeight = 3;
+        const drumGeo = new THREE.CylinderGeometry(drumRadius, drumRadius, drumHeight, 32, 1, true); // True = open ended
+        const drum = new THREE.Mesh(drumGeo, mat);
+        drum.position.set(4, 2.5, 0);
+        drum.castShadow = drum.receiveShadow = true;
+        soaneDomeGroup.add(drum);
+
+        // 3. Soane Stained Glass Simulation (The Windows)
+        // Instead of geometry holes, we use emissive textures.
+        const glassLoader = new THREE.TextureLoader();
+        // A placeholder gradient texture simulating amber/blue geometric glass
+        const glassTex = glassLoader.load('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36z8gAFmACYmAFEEAAY4NVALGBCQA4wAYAn19Z7wAAAABJRU5ErkJggg==');
+        
+        const glassMat = new THREE.MeshBasicMaterial({ 
+            color: 0xffcc33, // Amber base
+            emissive: 0xffcc33, // Stained glass glows
+            emissiveIntensity: 5,
+            transparent: true,
+            opacity: 0.9,
+            side: THREE.DoubleSide
+        });
+        
+        // Twelve windows around the drum
+        const windowCount = 12;
+        for (let i = 0; i < windowCount; i++) {
+            const angle = (i / windowCount) * Math.PI * 2;
+            const windowGeo = new THREE.PlaneGeometry(1.2, 2.2); // Arch shape simulated by plane
+            const windowFrame = new THREE.Mesh(windowGeo, glassMat);
             
-            // Nave
-            const nave = new THREE.Mesh(new THREE.BoxGeometry(10, 4, 4), material);
-            nave.castShadow = true;
-            nave.receiveShadow = true;
-            scene.add(nave);
-
-            // Lantern Tower
-            const tower = new THREE.Mesh(new THREE.BoxGeometry(3, 8, 3), material);
-            tower.position.set(3.5, 2, 0);
-            tower.castShadow = true;
-            tower.receiveShadow = true;
-            scene.add(tower);
-
-            // Floor
-            const floorGeo = new THREE.PlaneGeometry(20, 20);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-            floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.position.y = -2;
-            floor.receiveShadow = true;
-            scene.add(floor);
-
-            document.getElementById('status').innerText = "3D Engine Active";
-            animate();
-        } catch (err) {
-            document.getElementById('status').innerText = "Error: " + err.message;
+            // Circular position
+            windowFrame.position.set(
+                4 + Math.sin(angle) * (drumRadius + 0.1),
+                2.5,
+                0 + Math.cos(angle) * (drumRadius + 0.1)
+            );
+            windowFrame.lookAt(4, 2.5, 0); // Always face the center
+            soaneDomeGroup.add(windowFrame);
         }
+
+        // 4. The Dome (Terminal half-sphere)
+        const domeGeo = new THREE.SphereGeometry(drumRadius, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2); // Half sphere
+        const dome = new THREE.Mesh(domeGeo, mat);
+        dome.position.set(4, 4, 0); // On top of the drum
+        dome.castShadow = dome.receiveShadow = true;
+        soaneDomeGroup.add(dome);
+
+        // 5. Minimal Nave for Context
+        const nave = new THREE.Mesh(new THREE.BoxGeometry(8, 4, 4), mat);
+        nave.position.set(-3, -0.1, 0);
+        nave.castShadow = nave.receiveShadow = true;
+        soaneDomeGroup.add(nave);
+
+        scene.add(soaneDomeGroup);
+    }
+
+    function setupListeners() {
+        // Model Upload
+        document.getElementById('objInput').addEventListener('change', (e) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const loader = new OBJLoader();
+                const object = loader.parse(event.target.result);
+                if(soaneDomeGroup) scene.remove(soaneDomeGroup); // Replace demo
+                currentModel = object;
+                currentModel.traverse(c => {
+                    if (c.isMesh) {
+                        c.castShadow = c.receiveShadow = true;
+                        c.material.transparent = true;
+                        c.material.side = THREE.DoubleSide;
+                    }
+                });
+                scene.add(currentModel);
+                document.getElementById('status').innerText = "3D Precedent Integrated";
+            };
+            reader.readAsText(e.target.files[0]);
+        });
+
+        // Floor Upload
+        document.getElementById('imgInput').addEventListener('change', (e) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                new THREE.TextureLoader().load(event.target.result, (tex) => {
+                    floor.material.map = tex;
+                    floor.material.needsUpdate = true;
+                    document.getElementById('status').innerText = "Floor Plan Data Active";
+                });
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        });
+
+        // View Toggles
+        document.getElementById('toggleView').addEventListener('click', function() {
+            isInterior = !isInterior;
+            this.classList.toggle('active');
+            this.innerText = isInterior ? "SWITCH TO EXTERIOR" : "SWITCH TO INTERIOR";
+            if(isInterior) moveCamera('crossing'); else moveCamera('exterior');
+        });
+
+        document.getElementById('spaceJump').addEventListener('change', (e) => moveCamera(e.target.value));
+    }
+
+    function moveCamera(key) {
+        const loc = locations[key];
+        // Special case: Looking up from floor
+        if(key === 'crossing') {
+            camera.position.set(...loc.pos);
+            controls.target.set(...loc.look); // Look at the dome peak
+        } else {
+            camera.position.set(...loc.pos);
+            controls.target.set(...loc.look);
+        }
+        controls.update();
     }
 
     function animate() {
         requestAnimationFrame(animate);
         
-        // Solar Math
         const hr = document.getElementById('hour').value;
+        const op = document.getElementById('opacity').value;
         document.getElementById('hourVal').innerText = Math.floor(hr) + ":" + Math.floor((hr % 1) * 60).toString().padStart(2, '0');
         
-        const angle = (hr - 12) * (Math.PI / 6); // Simplified path
-        sun.position.set(Math.sin(angle) * 20, 15, Math.cos(angle) * 20);
+        if (soaneDomeGroup) {
+            soaneDomeGroup.traverse(n => { if(n.isMesh && n.material.type !== "MeshBasicMaterial") n.material.opacity = op; });
+        }
+
+        // Sun Logic
+        const angle = (hr - 12) * (Math.PI / 6);
+        sun.position.set(Math.sin(angle) * 30, 20, Math.cos(angle) * 30);
         
+        controls.update();
         renderer.render(scene, camera);
     }
 
-    // Image Upload Listener
-    document.getElementById('fileInput').addEventListener('change', (e) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const loader = new THREE.TextureLoader();
-            loader.load(event.target.result, (tex) => {
-                floor.material.map = tex;
-                floor.material.needsUpdate = true;
-                document.getElementById('status').innerText = "Floor Plan Uploaded";
-            });
-        };
-        reader.readAsDataURL(e.target.files[0]);
-    });
-
-    window.addEventListener('resize', () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
-    });
-
     init();
 </script>
-
 </body>
 </html>

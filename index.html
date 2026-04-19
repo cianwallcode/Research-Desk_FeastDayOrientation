@@ -39,8 +39,8 @@
 </div>
 
 <div id="controls" style="display: none;">
-    <button onclick="switchModel('soane')">Soane Hall</button>
-    <button onclick="switchModel('tadoando')">Tadoando Church</button>
+    <button id="btn-soane">Soane Hall</button>
+    <button id="btn-tadoando">Tadoando Church</button>
     <br><br>
     <label>SOLAR TIME</label>
     <input type="range" id="hour" min="8" max="17" step="0.01" value="10.5">
@@ -79,12 +79,16 @@
         scene.add(sun, new THREE.AmbientLight(0xffffff, 0.4));
         scene.add(modelGroup);
 
+        // Bind Events
         document.getElementById('start-project').onclick = () => {
             document.getElementById('landing-page').style.display = 'none';
             document.getElementById('controls').style.display = 'block';
             switchModel('soane');
             animate();
         };
+
+        document.getElementById('btn-soane').addEventListener('click', () => switchModel('soane'));
+        document.getElementById('btn-tadoando').addEventListener('click', () => switchModel('tadoando'));
     }
 
     function switchModel(type) {
@@ -95,14 +99,12 @@
 
     function buildSoaneHall() {
         const mat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, side: THREE.DoubleSide });
-        // Piers
         const pierGeom = new THREE.BoxGeometry(10, 30, 10);
         for(let x of [-15, 15]) for(let z of [-15, 15]) {
             const p = new THREE.Mesh(pierGeom, mat);
             p.position.set(x, 5, z);
             modelGroup.add(p);
         }
-        // Dome
         const dome = new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16, 0, Math.PI*2, 0, Math.PI/2.5), mat);
         dome.position.y = 28;
         modelGroup.add(dome);
@@ -115,8 +117,8 @@
     function buildTadoandoHall() {
         const mat = new THREE.MeshStandardMaterial({ color: 0xdddddd });
         // Cruciform Cuboid Layout
-        const nave = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 40), mat); // Main body
-        const transept = new THREE.Mesh(new THREE.BoxGeometry(30, 10, 10), mat); // Arms
+        const nave = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 40), mat);
+        const transept = new THREE.Mesh(new THREE.BoxGeometry(30, 10, 10), mat);
         nave.position.y = 5;
         transept.position.y = 5;
         modelGroup.add(nave, transept);

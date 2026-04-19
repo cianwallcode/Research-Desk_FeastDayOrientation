@@ -4,25 +4,23 @@
     <meta charset="UTF-8">
     <title>Soane Archive: Cinematic Perspective</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23ff4500%22/><text x=%2250%22 y=%2270%22 font-family=%22sans-serif%22 font-weight=%22bold%22 font-size=%2260%22 fill=%22white%22 text-anchor=%22middle%22>R</text></svg>">
-    
     <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
     </script>
     <style>
         :root { --accent: #ff4500; --bg: #ffffff; }
-        body { margin: 0; font-family: 'Georgia', serif; color: #333; background: var(--bg); height: 100vh; display: flex; flex-direction: column; }
+        body { margin: 0; font-family: 'Georgia', serif; color: #333; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
         header { padding: 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
         .logo { cursor: pointer; font-weight: bold; font-size: 1.2rem; color: var(--accent); }
-        nav a { margin-left: 20px; text-decoration: none; color: #333; font-size: 0.8rem; text-transform: uppercase; }
         
-        #main-container { flex: 1; overflow-y: auto; position: relative; }
-        #canvas-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        
+        #main-container { flex: 1; position: relative; overflow-y: auto; }
         #landing-page { position: absolute; z-index: 10; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         #start-project { padding: 15px 30px; background: var(--accent); color: white; border: none; cursor: pointer; font-size: 1rem; }
         
+        #canvas-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         #controls { position: absolute; bottom: 20px; left: 20px; z-index: 5; background: rgba(255,255,255,0.9); padding: 15px; border: 1px solid #ddd; }
+        
         footer { padding: 10px; border-top: 1px solid #ddd; font-size: 10px; color: #777; text-align: center; }
     </style>
 </head>
@@ -30,10 +28,6 @@
 
 <header>
     <div class="logo" onclick="location.reload()">SOANE ARCHIVE</div>
-    <nav>
-        <a href="#">Inventory</a>
-        <a href="#">Comparison</a>
-    </nav>
 </header>
 
 <div id="main-container">
@@ -45,10 +39,10 @@
 </div>
 
 <div id="controls" style="display: none;">
-    <button onclick="switchModel('soane')">Soane Interior</button>
+    <button onclick="switchModel('soane')">Soane Hall</button>
     <button onclick="switchModel('tadoando')">Tadoando Church</button>
     <br><br>
-    <label>TIME OF DAY</label>
+    <label>SOLAR TIME</label>
     <input type="range" id="hour" min="8" max="17" step="0.01" value="10.5">
 </div>
 
@@ -60,26 +54,29 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    let scene, camera, renderer, controls, sun;
+    let scene, camera, renderer, controls, sun, interiorLight;
     let modelGroup = new THREE.Group();
     const container = document.getElementById('canvas-wrapper');
 
     function init() {
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff);
+        
         camera = new THREE.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.1, 1000);
-        camera.position.set(0, 1.7, 10);
+        camera.position.set(0, 1.7, 25);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
         container.appendChild(renderer.domElement);
 
         controls = new OrbitControls(camera, renderer.domElement);
-        controls.minPolarAngle = Math.PI / 2.1; 
+        controls.minPolarAngle = Math.PI / 2.1;
         controls.maxPolarAngle = Math.PI / 2.1;
         
         sun = new THREE.DirectionalLight(0xffffff, 2.5);
-        scene.add(sun);
+        sun.castShadow = true;
+        scene.add(sun, new THREE.AmbientLight(0xffffff, 0.4));
         scene.add(modelGroup);
 
         document.getElementById('start-project').onclick = () => {
@@ -92,12 +89,37 @@
 
     function switchModel(type) {
         modelGroup.clear();
-        const mat = new THREE.MeshStandardMaterial({color: 0xcccccc});
-        if(type === 'soane') {
-            modelGroup.add(new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), mat));
-        } else {
-            modelGroup.add(new THREE.Mesh(new THREE.BoxGeometry(20, 5, 5), mat));
+        if(type === 'soane') buildSoaneHall();
+        else buildTadoandoHall();
+    }
+
+    function buildSoaneHall() {
+        const mat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, side: THREE.DoubleSide });
+        // Piers
+        const pierGeom = new THREE.BoxGeometry(10, 30, 10);
+        for(let x of [-15, 15]) for(let z of [-15, 15]) {
+            const p = new THREE.Mesh(pierGeom, mat);
+            p.position.set(x, 5, z);
+            modelGroup.add(p);
         }
+        // Dome
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16, 0, Math.PI*2, 0, Math.PI/2.5), mat);
+        dome.position.y = 28;
+        modelGroup.add(dome);
+        
+        interiorLight = new THREE.PointLight(0xff4500, 40, 80);
+        interiorLight.position.set(0, 25, 0);
+        modelGroup.add(interiorLight);
+    }
+
+    function buildTadoandoHall() {
+        const mat = new THREE.MeshStandardMaterial({ color: 0xdddddd });
+        // Cruciform Cuboid Layout
+        const nave = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 40), mat); // Main body
+        const transept = new THREE.Mesh(new THREE.BoxGeometry(30, 10, 10), mat); // Arms
+        nave.position.y = 5;
+        transept.position.y = 5;
+        modelGroup.add(nave, transept);
     }
 
     function animate() {

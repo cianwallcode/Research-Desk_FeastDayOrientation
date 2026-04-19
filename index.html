@@ -30,9 +30,6 @@
     <div id="canvas-wrapper"></div>
 </div>
 <div id="controls" style="display: none;">
-    <button id="btn-soane">Soane Hall</button>
-    <button id="btn-tadoando">Tadoando Church</button>
-    <br><br>
     <label>SOLAR TIME</label>
     <input type="range" id="hour" min="8" max="17" step="0.01" value="10.5">
 </div>
@@ -46,87 +43,75 @@
     let modelGroup = new THREE.Group();
     const container = document.getElementById('canvas-wrapper');
 
+    // Scale Factor: 20x
+    const SF = 20;
+
     function init() {
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff);
-        camera = new THREE.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.1, 3000);
+        // Extended far plane for massive scale
+        camera = new THREE.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.1, 100000);
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.shadowMap.enabled = true;
         container.appendChild(renderer.domElement);
         
         controls = new OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false;
+        controls.maxDistance = 5000; 
+        controls.minDistance = 10;
         
         sun = new THREE.DirectionalLight(0xffffff, 2.5);
         sun.castShadow = true;
-        sun.shadow.camera.left = -500; sun.shadow.camera.right = 500;
-        sun.shadow.camera.top = 500; sun.shadow.camera.bottom = -500;
-        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.camera.left = -10000; sun.shadow.camera.right = 10000;
+        sun.shadow.camera.top = 10000; sun.shadow.camera.bottom = -10000;
+        sun.shadow.mapSize.set(4096, 4096);
         scene.add(sun, new THREE.AmbientLight(0xffffff, 0.6));
         scene.add(modelGroup);
 
         document.getElementById('start-project').onclick = () => {
             document.getElementById('landing-page').style.display = 'none';
             document.getElementById('controls').style.display = 'block';
-            switchModel('tadoando');
+            buildChurch();
             animate();
         };
-
-        document.getElementById('btn-soane').addEventListener('click', () => switchModel('soane'));
-        document.getElementById('btn-tadoando').addEventListener('click', () => switchModel('tadoando'));
     }
 
-    function switchModel(type) {
-        modelGroup.clear();
-        if(type === 'soane') {
-            camera.position.set(0, 100, 150);
-            controls.target.set(0, 15, 0);
-            buildSoaneHall();
-        } else {
-            // Restore interior view
-            camera.position.set(0, 60, 200); 
-            controls.target.set(0, 60, -500); 
-            buildTadoandoHall();
-        }
-    }
+    function buildChurch() {
+        // Floor level eye position
+        camera.position.set(0, 0, 6000); 
+        controls.target.set(0, 0, -6000);
 
-    function buildSoaneHall() {
-        const mat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
-        for(let x of [-15, 15]) for(let z of [-15, 15]) {
-            const p = new THREE.Mesh(new THREE.BoxGeometry(10, 30, 10), mat);
-            p.position.set(x, 5, z);
-            modelGroup.add(p);
-        }
-    }
-
-    function buildTadoandoHall() {
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, side: THREE.DoubleSide });
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, side: THREE.BackSide });
         
-        // Expanded Cruciform Footprint
-        const nave = new THREE.Mesh(new THREE.BoxGeometry(120, 120, 800), wallMat);
-        const transept = new THREE.Mesh(new THREE.BoxGeometry(400, 120, 120), wallMat);
-        nave.position.set(0, 60, -100);
-        transept.position.set(0, 60, -200);
+        // Scaled Volumes
+        const nave = new THREE.Mesh(new THREE.BoxGeometry(150*SF, 150*SF, 900*SF), wallMat);
+        nave.position.set(0, 75*SF, -150*SF);
+        
+        const transept = new THREE.Mesh(new THREE.BoxGeometry(500*SF, 150*SF, 150*SF), wallMat);
+        transept.position.set(0, 75*SF, -300*SF);
+        
         modelGroup.add(nave, transept);
 
-        // Cruciform Window (Far wall)
+        // Altar Wall
         const shape = new THREE.Shape();
-        shape.moveTo(-200, -200); shape.lineTo(200, -200); shape.lineTo(200, 200); shape.lineTo(-200, 200);
+        shape.moveTo(-250*SF, -250*SF); shape.lineTo(250*SF, -250*SF); shape.lineTo(250*SF, 250*SF); shape.lineTo(-250*SF, 250*SF);
+        
         const h = new THREE.Path();
-        h.moveTo(-40, 80); h.lineTo(40, 80); h.lineTo(40, 40); h.lineTo(80, 40); h.lineTo(80, -40); h.lineTo(40, -40);
-        h.lineTo(40, -120); h.lineTo(-40, -120); h.lineTo(-40, -40); h.lineTo(-80, -40); h.lineTo(-80, 40); h.lineTo(-40, 40);
+        h.moveTo(-50*SF, 100*SF); h.lineTo(50*SF, 100*SF); h.lineTo(50*SF, 50*SF); h.lineTo(100*SF, 50*SF); h.lineTo(100*SF, -50*SF); h.lineTo(50*SF, -50*SF);
+        h.lineTo(50*SF, -150*SF); h.lineTo(-50*SF, -150*SF); h.lineTo(-50*SF, -50*SF); h.lineTo(-100*SF, -50*SF); h.lineTo(-100*SF, 50*SF); h.lineTo(-50*SF, 50*SF);
         shape.holes.push(h);
 
-        const crossWall = new THREE.Mesh(new THREE.ShapeGeometry(shape), wallMat);
-        crossWall.position.set(0, 60, -500);
-        modelGroup.add(crossWall);
+        const altarWall = new THREE.Mesh(new THREE.ShapeGeometry(shape), wallMat);
+        altarWall.position.set(0, 75*SF, -600*SF);
+        modelGroup.add(altarWall);
     }
 
     function animate() {
         requestAnimationFrame(animate);
         const hr = document.getElementById('hour').value;
         const angle = (hr - 12) * (Math.PI / 6);
-        sun.position.set(Math.sin(angle) * 800, 500, Math.cos(angle) * 800);
+        sun.position.set(Math.sin(angle) * 20000, 10000, Math.cos(angle) * 20000);
         renderer.render(scene, camera);
     }
     init();

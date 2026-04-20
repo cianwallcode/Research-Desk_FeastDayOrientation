@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Solar Orientation + Shadow Simulation</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22black%22/><text x=%2230%22 y=%2270%22 font-family=%22sans-serif%22 font-weight=%22bold%22 font-size=%2260%22 fill=%22%23ff4500%22 text-anchor=%22middle%22>R</text><path d=%22M65 40 L85 40 L85 75 L65 75 Z M70 40 L70 30 L80 30 L80 40 Z M72 30 L75 22 L78 30 Z%22 fill=%22white%22/></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2248%22 fill=%22%23ff4500%22/><text x=%2250%22 y=%2272%22 font-family=%22sans-serif%22 font-weight=%22bold%22 font-size=%2260%22 fill=%22white%22 text-anchor=%22middle%22>R</text></svg>">
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         #canvas-wrapper { width: 100vw; height: 100vh; }
-        #controls { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.8); color: white; padding: 20px; border: 1px solid #444; }
+        #controls { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.8); color: white; padding: 20px; border: 1px solid #444; border-radius: 4px;}
+        input[type=range] { width: 200px; }
     </style>
     <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
@@ -24,8 +25,10 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    let scene, camera, renderer, sun;
+    let scene, camera, renderer, sun, controls;
     const container = document.getElementById('canvas-wrapper');
+
+    init();
 
     function init() {
         scene = new THREE.Scene();
@@ -39,12 +42,18 @@
         renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
         container.appendChild(renderer.domElement);
         
+        // Basic controls for viewing
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false;
+        controls.minDistance = 100;
+        controls.maxDistance = 2000;
+        
         // Low ambient for high contrast projection
         scene.add(new THREE.AmbientLight(0xffffff, 0.02));
         
         sun = new THREE.DirectionalLight(0xffffff, 5);
         sun.castShadow = true;
-        // Large shadow area to account for 360 degree orbit
+        // Shadow area adjusted for 360 degree orbit and wider wall
         sun.shadow.camera.left = -600; sun.shadow.camera.right = 600;
         sun.shadow.camera.top = 600; sun.shadow.camera.bottom = -600;
         sun.shadow.camera.near = 1; sun.shadow.camera.far = 2000;
@@ -56,41 +65,77 @@
     }
 
     function buildScene() {
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-        
-        // Wall (200w x 400h)
+        // Floor Plane (800x800)
+        const floorWidth = 800;
+        const floorDepth = 800;
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(floorWidth, floorDepth), 
+            new THREE.MeshStandardMaterial({color: 0x050505}) // Very dark grey/black floor
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // --- WALL UPDATE ---
+        // Lighten the wall slightly (was 0x333333) and extend to floor width (800)
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x555555 }); // Medium-light grey
+        const wallWidth = floorWidth; // Extend to floor width (800)
+        const wallHeight = 400;
+
+        // Create the wider wall shape with the hole
         const wallShape = new THREE.Shape();
-        wallShape.moveTo(-100, -200); wallShape.lineTo(100, -200); wallShape.lineTo(100, 200); wallShape.lineTo(-100, 200);
-        
-        // Cruciform hole
+        const halfW = wallWidth / 2;
+        const halfH = wallHeight / 2;
+        // Coordinates relative to shape center (0,0)
+        wallShape.moveTo(-halfW, -halfH); 
+        wallShape.lineTo(halfW, -halfH); 
+        wallShape.lineTo(halfW, halfH); 
+        wallShape.lineTo(-halfW, halfH); 
+        wallShape.closePath();
+
+        // Create the Cruciform Hole path
         const hole = new THREE.Path();
         hole.moveTo(-12, 100); hole.lineTo(12, 100); hole.lineTo(12, 25); hole.lineTo(50, 25); 
         hole.lineTo(50, -25); hole.lineTo(12, -25); hole.lineTo(12, -150); hole.lineTo(-12, -150); 
         hole.lineTo(-12, -25); hole.lineTo(-50, -25); hole.lineTo(-50, 25); hole.lineTo(-12, 25);
-        hole.lineTo(-12, 100);
+        hole.lineTo(-12, 100); 
+        hole.closePath();
         wallShape.holes.push(hole);
 
-        const wall = new THREE.Mesh(new THREE.ExtrudeGeometry(wallShape, { depth: 20, bevelEnabled: false }), wallMat);
-        // Positioned at Z = -400 to meet floor edge
-        wall.position.set(0, 200, -400);
+        // Extrude and position
+        const wall = new THREE.Mesh(
+            new THREE.ExtrudeGeometry(wallShape, { depth: 20, bevelEnabled: false }), 
+            wallMat
+        );
+        // Positioned at Z = -400 (half the floor depth) to meet floor edge
+        wall.position.set(0, wallHeight/2, -(floorDepth/2));
         wall.castShadow = true;
         scene.add(wall);
-        
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), new THREE.MeshStandardMaterial({color: 0x050505}));
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        scene.add(floor);
     }
 
     function animate() {
         requestAnimationFrame(animate);
         const hr = document.getElementById('hour').value;
-        // Full 360 degree rotation
+        // Full 360 degree rotation (solar angle)
         const angle = (hr / 24) * Math.PI * 2;
-        sun.position.set(Math.sin(angle) * 600, 400, Math.cos(angle) * 600);
+        // Orbital distance 
+        const dist = 700;
+        sun.position.set(Math.sin(angle) * dist, 500, Math.cos(angle) * dist);
+        
+        // Optional: Make the sun 'Target' the wall/hole to optimize shadow quality
+        sun.target.position.set(0, 100, -400); 
+        sun.target.updateMatrixWorld();
+
         renderer.render(scene, camera);
     }
-    init();
+
+    // Handle resize
+    window.addEventListener('resize', onWindowResize, false);
+    function onWindowResize() {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    }
 </script>
 </body>
 </html>

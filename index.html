@@ -4,26 +4,20 @@
     <meta charset="UTF-8">
     <title>Solar Orientation + Shadow Simulation</title>
     <style>
-        :root { --accent: #ff4500; --bg: #ffffff; }
-        body { margin: 0; font-family: 'Georgia', serif; color: #333; background: #000; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        header { padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; color: white; }
-        .logo { cursor: pointer; font-weight: bold; font-size: 1.2rem; color: var(--accent); text-transform: uppercase; }
-        #canvas-wrapper { flex: 1; position: relative; }
-        #controls { position: absolute; bottom: 20px; left: 20px; z-index: 5; background: rgba(0,0,0,0.8); color: white; padding: 15px; border: 1px solid #444; }
-        footer { padding: 10px; border-top: 1px solid #333; font-size: 10px; color: #555; text-align: center; background: #000; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+        #canvas-wrapper { width: 100vw; height: 100vh; }
+        #controls { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.8); color: white; padding: 20px; border: 1px solid #444; }
     </style>
     <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
     </script>
 </head>
 <body>
-<header><div class="logo" onclick="location.reload()">SOLAR ORIENTATION + SHADOW SIMULATION</div></header>
 <div id="canvas-wrapper"></div>
 <div id="controls">
-    <label>SOLAR TIME</label><br>
-    <input type="range" id="hour" min="8" max="17" step="0.01" value="10.5">
+    <label>SOLAR TIME (Projected Light)</label><br>
+    <input type="range" id="hour" min="8" max="17" step="0.01" value="12">
 </div>
-<footer>&copy; 2026 R4 / Solar Orientation Simulation</footer>
 
 <script type="module">
     import * as THREE from 'three';
@@ -34,25 +28,26 @@
 
     function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050505);
-        camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 1, 5000);
-        // Tighter camera position for the 200-width scale
-        camera.position.set(0, 200, 600);
+        scene.background = new THREE.Color(0x000000); // Absolute black floor
+        camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 1, 5000);
+        camera.position.set(0, 300, 600);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
         container.appendChild(renderer.domElement);
         
-        scene.add(new THREE.AmbientLight(0xffffff, 0.05));
+        // Near-zero ambient light creates the contrast for the beam
+        scene.add(new THREE.AmbientLight(0xffffff, 0.01));
         
-        sun = new THREE.DirectionalLight(0xffffff, 3);
+        sun = new THREE.DirectionalLight(0xffffff, 5); // Intense sun
         sun.castShadow = true;
-        // Adjusted shadow frustum for smaller 200-width scale
-        sun.shadow.camera.left = -500; sun.shadow.camera.right = 500;
-        sun.shadow.camera.top = 800; sun.shadow.camera.bottom = -400;
-        sun.shadow.mapSize.set(2048, 2048);
+        // Focus the shadow camera tightly on the floor area
+        sun.shadow.camera.left = -300; sun.shadow.camera.right = 300;
+        sun.shadow.camera.top = 300; sun.shadow.camera.bottom = -300;
+        sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 1000;
+        sun.shadow.mapSize.set(4096, 4096); // High resolution for sharp edges
         scene.add(sun);
 
         buildScene();
@@ -60,31 +55,26 @@
     }
 
     function buildScene() {
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
         
-        // Wall: 200w x 400h
+        // Wall
         const wallShape = new THREE.Shape();
         wallShape.moveTo(-100, -200); wallShape.lineTo(100, -200); wallShape.lineTo(100, 200); wallShape.lineTo(-100, 200);
         
-        // Scaled Cruciform Hole (Proportional to 200w wall)
         const hole = new THREE.Path();
-        hole.moveTo(-12, 100); hole.lineTo(12, 100); // Top
-        hole.lineTo(12, 25); hole.lineTo(50, 25); // Right Arm
-        hole.lineTo(50, -25); hole.lineTo(12, -25);
-        hole.lineTo(12, -150); hole.lineTo(-12, -150); // Long Base
-        hole.lineTo(-12, -25); hole.lineTo(-50, -25); // Left Arm
-        hole.lineTo(-50, 25); hole.lineTo(-12, 25);
-        hole.lineTo(-12, 100); // Close
+        hole.moveTo(-12, 100); hole.lineTo(12, 100); hole.lineTo(12, 25); hole.lineTo(50, 25); 
+        hole.lineTo(50, -25); hole.lineTo(12, -25); hole.lineTo(12, -150); hole.lineTo(-12, -150); 
+        hole.lineTo(-12, -25); hole.lineTo(-50, -25); hole.lineTo(-50, 25); hole.lineTo(-12, 25);
+        hole.lineTo(-12, 100);
         wallShape.holes.push(hole);
 
-        const extrudeSettings = { depth: 20, bevelEnabled: false };
-        const wallGeom = new THREE.ExtrudeGeometry(wallShape, extrudeSettings);
-        const wall = new THREE.Mesh(wallGeom, wallMat);
+        const wall = new THREE.Mesh(new THREE.ExtrudeGeometry(wallShape, { depth: 20, bevelEnabled: false }), wallMat);
         wall.position.set(0, 200, -200);
         wall.castShadow = true;
         scene.add(wall);
         
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), new THREE.MeshStandardMaterial({color: 0x111111}));
+        // Dark floor to show the light projection
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), new THREE.MeshStandardMaterial({color: 0x0a0a0a}));
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
@@ -94,7 +84,8 @@
         requestAnimationFrame(animate);
         const hr = document.getElementById('hour').value;
         const angle = (hr - 12) * (Math.PI / 6);
-        sun.position.set(Math.sin(angle) * 500, 400, Math.cos(angle) * 500);
+        // Position the sun to cast the beam
+        sun.position.set(Math.sin(angle) * 500, 300, Math.cos(angle) * 500);
         renderer.render(scene, camera);
     }
     init();

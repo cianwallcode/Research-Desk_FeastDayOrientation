@@ -8,7 +8,9 @@
         body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
         #canvas-wrapper { width: 100vw; height: 100vh; }
         #controls { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.8); color: white; padding: 20px; border: 1px solid #444; border-radius: 4px;}
-        input[type=range] { width: 200px; }
+        button { background: #333; color: white; border: 1px solid #555; padding: 8px 12px; cursor: pointer; margin-right: 5px; }
+        button:hover { background: #555; }
+        input[type=range] { width: 200px; display: block; margin-top: 10px; }
     </style>
     <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
@@ -17,7 +19,8 @@
 <body>
 <div id="canvas-wrapper"></div>
 <div id="controls">
-    <label>SOLAR ORBIT (0-24h)</label><br>
+    <button id="btn-tadoando">Tadoando</button>
+    <button id="btn-soane">Soane</button>
     <input type="range" id="hour" min="0" max="24" step="0.01" value="12">
 </div>
 
@@ -25,10 +28,9 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    let scene, camera, renderer, sun, controls;
+    let scene, camera, renderer, sun, modelGroup;
+    let currentMode = 'tadoando';
     const container = document.getElementById('canvas-wrapper');
-
-    init();
 
     function init() {
         scene = new THREE.Scene();
@@ -42,100 +44,69 @@
         renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
         container.appendChild(renderer.domElement);
         
-        // Basic controls for viewing
-        controls = new OrbitControls(camera, renderer.domElement);
-        controls.enablePan = false;
-        controls.minDistance = 100;
-        controls.maxDistance = 2000;
+        new OrbitControls(camera, renderer.domElement);
         
-        // Low ambient for high contrast projection
         scene.add(new THREE.AmbientLight(0xffffff, 0.02));
         
         sun = new THREE.DirectionalLight(0xffffff, 5);
         sun.castShadow = true;
-        // Shadow area adjusted for 360 degree orbit and wider wall
         sun.shadow.camera.left = -600; sun.shadow.camera.right = 600;
         sun.shadow.camera.top = 600; sun.shadow.camera.bottom = -600;
-        sun.shadow.camera.near = 1; sun.shadow.camera.far = 2000;
         sun.shadow.mapSize.set(4096, 4096);
         scene.add(sun);
 
-        buildScene();
+        modelGroup = new THREE.Group();
+        scene.add(modelGroup);
+
+        document.getElementById('btn-tadoando').onclick = () => switchMode('tadoando');
+        document.getElementById('btn-soane').onclick = () => switchMode('soane');
+
+        switchMode('tadoando');
         animate();
     }
 
-    function buildScene() {
-        // Floor Plane (800x800)
-        const floorWidth = 800;
-        const floorDepth = 800;
-        const floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(floorWidth, floorDepth), 
-            new THREE.MeshStandardMaterial({color: 0x050505}) // Very dark grey/black floor
-        );
+    function switchMode(mode) {
+        currentMode = mode;
+        modelGroup.clear();
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), new THREE.MeshStandardMaterial({color: 0x050505}));
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
-        scene.add(floor);
+        modelGroup.add(floor);
 
-        // --- WALL UPDATE ---
-        // Lighten the wall slightly (was 0x333333) and extend to floor width (800)
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x555555 }); // Medium-light grey
-        const wallWidth = floorWidth; // Extend to floor width (800)
-        const wallHeight = 400;
-
-        // Create the wider wall shape with the hole
-        const wallShape = new THREE.Shape();
-        const halfW = wallWidth / 2;
-        const halfH = wallHeight / 2;
-        // Coordinates relative to shape center (0,0)
-        wallShape.moveTo(-halfW, -halfH); 
-        wallShape.lineTo(halfW, -halfH); 
-        wallShape.lineTo(halfW, halfH); 
-        wallShape.lineTo(-halfW, halfH); 
-        wallShape.closePath();
-
-        // Create the Cruciform Hole path
-        const hole = new THREE.Path();
-        hole.moveTo(-12, 100); hole.lineTo(12, 100); hole.lineTo(12, 25); hole.lineTo(50, 25); 
-        hole.lineTo(50, -25); hole.lineTo(12, -25); hole.lineTo(12, -150); hole.lineTo(-12, -150); 
-        hole.lineTo(-12, -25); hole.lineTo(-50, -25); hole.lineTo(-50, 25); hole.lineTo(-12, 25);
-        hole.lineTo(-12, 100); 
-        hole.closePath();
-        wallShape.holes.push(hole);
-
-        // Extrude and position
-        const wall = new THREE.Mesh(
-            new THREE.ExtrudeGeometry(wallShape, { depth: 20, bevelEnabled: false }), 
-            wallMat
-        );
-        // Positioned at Z = -400 (half the floor depth) to meet floor edge
-        wall.position.set(0, wallHeight/2, -(floorDepth/2));
-        wall.castShadow = true;
-        scene.add(wall);
+        if (mode === 'tadoando') {
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+            const wallShape = new THREE.Shape();
+            wallShape.moveTo(-400, -200); wallShape.lineTo(400, -200); wallShape.lineTo(400, 200); wallShape.lineTo(-400, 200);
+            const hole = new THREE.Path();
+            hole.moveTo(-12, 100); hole.lineTo(12, 100); hole.lineTo(12, 25); hole.lineTo(50, 25); 
+            hole.lineTo(50, -25); hole.lineTo(12, -25); hole.lineTo(12, -150); hole.lineTo(-12, -150); 
+            hole.lineTo(-12, -25); hole.lineTo(-50, -25); hole.lineTo(-50, 25); hole.lineTo(-12, 25);
+            hole.lineTo(-12, 100);
+            wallShape.holes.push(hole);
+            const wall = new THREE.Mesh(new THREE.ExtrudeGeometry(wallShape, { depth: 20, bevelEnabled: false }), wallMat);
+            wall.position.set(0, 200, -400);
+            wall.castShadow = true;
+            modelGroup.add(wall);
+        } else {
+            const colMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+            for(let x of [-200, 200]) for(let z of [-200, 200]) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(50, 400, 50), colMat);
+                p.position.set(x, 200, z);
+                p.castShadow = true;
+                modelGroup.add(p);
+            }
+        }
     }
 
     function animate() {
         requestAnimationFrame(animate);
         const hr = document.getElementById('hour').value;
-        // Full 360 degree rotation (solar angle)
         const angle = (hr / 24) * Math.PI * 2;
-        // Orbital distance 
-        const dist = 700;
-        sun.position.set(Math.sin(angle) * dist, 500, Math.cos(angle) * dist);
-        
-        // Optional: Make the sun 'Target' the wall/hole to optimize shadow quality
-        sun.target.position.set(0, 100, -400); 
-        sun.target.updateMatrixWorld();
-
+        // Lower Y (250) creates longer shadows
+        sun.position.set(Math.sin(angle) * 700, 250, Math.cos(angle) * 700);
         renderer.render(scene, camera);
     }
-
-    // Handle resize
-    window.addEventListener('resize', onWindowResize, false);
-    function onWindowResize() {
-        camera.aspect = container.clientWidth / container.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
-    }
+    init();
 </script>
 </body>
 </html>
